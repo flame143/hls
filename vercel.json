@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/stream.m3u8",
+      "destination": "http://hls.studentsdemo.com:8080/memfs/f9aa7828-ce2d-4d29-894e-99f6f2ebb03e.m3u8"
+    }
+  ]
+}
