@@ -8,14 +8,23 @@ const categories = [
     { id: 18, name: 'Drama' },
     { id: 10765, name: 'Sci-Fi & Fantasy' },
     { id: 80, name: 'Crime' },
-    { id: 99, name: 'Documentary' }
+    { id: 99, name: 'Documentary' },
+    { id: 10751, name: 'Family' },
+    { id: 10768, name: 'War & Politics' }
 ];
 
 const state = {
     categoryPages: {},
-    activeGenre: null
+    activeGenre: null,
+    currentShow: {
+        id: null,
+        season: 1,
+        episode: 1,
+        totalSeasons: 1
+    }
 };
 
+// API Functions
 async function fetchTVShows(categoryId, page = 1) {
     try {
         const response = await axios.get(`${API_BASE_URL}/discover/tv`, {
@@ -33,11 +42,55 @@ async function fetchTVShows(categoryId, page = 1) {
     }
 }
 
+async function fetchTVShowDetails(showId) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/tv/${showId}`, {
+            params: {
+                api_key: API_KEY
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching TV show details:', error);
+        return null;
+    }
+}
+
+async function fetchSeasonDetails(showId, seasonNumber) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/tv/${showId}/season/${seasonNumber}`, {
+            params: {
+                api_key: API_KEY
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching season details:', error);
+        return null;
+    }
+}
+
+async function searchTVShows(query) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/search/tv`, {
+            params: {
+                api_key: API_KEY,
+                query: query
+            }
+        });
+        return response.data.results;
+    } catch (error) {
+        console.error('Error searching TV shows:', error);
+        return [];
+    }
+}
+
+// UI Creation Functions
 function createTVShowElement(show) {
     const showElement = document.createElement('div');
-    showElement.className = 'movie'; // keeping class name for CSS compatibility
+    showElement.className = 'movie';
     showElement.innerHTML = `
-        <img src="${IMG_BASE_URL}${show.poster_path}" alt="${show.name}">
+        <img src="${show.poster_path ? IMG_BASE_URL + show.poster_path : 'placeholder.jpg'}" alt="${show.name}">
         <div class="movie-info">
             <div class="movie-title">${show.name}</div>
             <div class="movie-rating">
@@ -49,6 +102,59 @@ function createTVShowElement(show) {
     return showElement;
 }
 
+async function createEpisodeSelector(showId, seasonNumber) {
+    const seasonData = await fetchSeasonDetails(showId, seasonNumber);
+    if (!seasonData) return;
+    
+    const episodeSelect = document.createElement('select');
+    episodeSelect.id = 'episode-select';
+    episodeSelect.className = 'episode-select';
+    
+    seasonData.episodes.forEach((episode) => {
+        const option = document.createElement('option');
+        option.value = episode.episode_number;
+        option.textContent = `Episode ${episode.episode_number}: ${episode.name}`;
+        episodeSelect.appendChild(option);
+    });
+    
+    episodeSelect.addEventListener('change', (e) => {
+        state.currentShow.episode = parseInt(e.target.value);
+        updatePlayer();
+    });
+    
+    return episodeSelect;
+}
+
+async function createSeasonSelector(showId, totalSeasons) {
+    const seasonSelect = document.createElement('select');
+    seasonSelect.id = 'season-select';
+    seasonSelect.className = 'season-select';
+    
+    for (let i = 1; i <= totalSeasons; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `Season ${i}`;
+        seasonSelect.appendChild(option);
+    }
+    
+    seasonSelect.addEventListener('change', async (e) => {
+        const seasonNumber = parseInt(e.target.value);
+        state.currentShow.season = seasonNumber;
+        state.currentShow.episode = 1;
+        
+        const episodeSelect = await createEpisodeSelector(showId, seasonNumber);
+        const oldEpisodeSelect = document.getElementById('episode-select');
+        if (oldEpisodeSelect) {
+            oldEpisodeSelect.replaceWith(episodeSelect);
+        }
+        
+        updatePlayer();
+    });
+    
+    return seasonSelect;
+}
+
+// Render Functions
 async function renderCategory(category, container) {
     const categoryElement = document.createElement('div');
     categoryElement.className = 'category';
@@ -90,10 +196,46 @@ async function renderCategories() {
     }
 }
 
-function openModal(tmdbId) {
-    const modal = document.getElementById('modal');
+// Modal Functions
+function updatePlayer() {
     const player = document.getElementById('player');
-    player.src = `https://vidsrc.xyz/embed/tv/${tmdbId}/1/1`; // Default to Season 1, Episode 1
+    player.src = `https://vidsrc.xyz/embed/tv/${state.currentShow.id}/${state.currentShow.season}/${state.currentShow.episode}`;
+}
+
+async function openModal(showId) {
+    const modal = document.getElementById('modal');
+    const showDetails = await fetchTVShowDetails(showId);
+    
+    if (!showDetails) return;
+    
+    state.currentShow = {
+        id: showId,
+        season: 1,
+        episode: 1,
+        totalSeasons: showDetails.number_of_seasons
+    };
+    
+    // Create or update the episode selection container
+    let selectorContainer = document.getElementById('episode-selector-container');
+    if (!selectorContainer) {
+        selectorContainer = document.createElement('div');
+        selectorContainer.id = 'episode-selector-container';
+        selectorContainer.className = 'episode-selector-container';
+        document.querySelector('.modal-content').insertBefore(selectorContainer, document.getElementById('player'));
+    }
+    
+    // Clear existing content
+    selectorContainer.innerHTML = '';
+    
+    // Add season and episode selectors
+    const seasonSelect = await createSeasonSelector(showId, showDetails.number_of_seasons);
+    const episodeSelect = await createEpisodeSelector(showId, 1);
+    
+    selectorContainer.appendChild(seasonSelect);
+    selectorContainer.appendChild(episodeSelect);
+    
+    // Update player
+    updatePlayer();
     modal.style.display = 'block';
 }
 
@@ -104,21 +246,7 @@ function closeModal() {
     player.src = '';
 }
 
-async function searchTVShows(query) {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/search/tv`, {
-            params: {
-                api_key: API_KEY,
-                query: query
-            }
-        });
-        return response.data.results;
-    } catch (error) {
-        console.error('Error searching TV shows:', error);
-        return [];
-    }
-}
-
+// Search Functions
 async function handleSearch() {
     const query = searchInput.value.trim();
     const searchResults = document.getElementById('search-results');
@@ -141,6 +269,7 @@ async function handleSearch() {
     }
 }
 
+// Genre Filter
 function createGenreFilter() {
     const genreFilter = document.getElementById('genre-filter');
     categories.forEach(category => {
@@ -162,6 +291,7 @@ function createGenreFilter() {
     });
 }
 
+// Event Listeners
 document.querySelector('.close').addEventListener('click', closeModal);
 window.addEventListener('click', (event) => {
     const modal = document.getElementById('modal');
@@ -175,5 +305,6 @@ const searchButton = document.getElementById('search-button');
 searchInput.addEventListener('input', handleSearch);
 searchButton.addEventListener('click', handleSearch);
 
+// Initialize
 createGenreFilter();
 renderCategories();
