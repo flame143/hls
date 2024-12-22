@@ -10,7 +10,8 @@ const categories = [
     { id: 80, name: 'Crime' },
     { id: 99, name: 'Documentary' },
     { id: 10751, name: 'Family' },
-    { id: 10768, name: 'War & Politics' }
+    { id: 10768, name: 'War & Politics' },
+    { id: 16, name: 'Anime & Animation' }
 ];
 
 const state = {
@@ -32,7 +33,11 @@ async function fetchTVShows(categoryId, page = 1) {
                 api_key: API_KEY,
                 with_genres: categoryId,
                 sort_by: 'popularity.desc',
-                page: page
+                page: page,
+                ...(categoryId === 16 && {
+                    with_original_language: 'ja',
+                    sort_by: 'popularity.desc'
+                })
             }
         });
         return response.data.results;
