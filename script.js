@@ -1,7 +1,7 @@
-
 const API_KEY = '2283c405a7e1d26a6b72a786916aad85';
 const API_BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const VIDEO_API_URL = 'https://multiembed.mov/directstream.php';
 
 const categories = [
     { id: 10759, name: 'Action & Adventure' },
@@ -205,7 +205,8 @@ async function renderCategories() {
 // Modal Functions
 function updatePlayer() {
     const player = document.getElementById('player');
-    player.src = `https://vidsrc.dev/embed/tv/embed/tv/${state.currentShow.id}/${state.currentShow.season}/${state.currentShow.episode}`;
+    const videoUrl = `${VIDEO_API_URL}?video_id=${state.currentShow.id}&tmdb=1&s=${state.currentShow.season}&e=${state.currentShow.episode}`;
+    player.src = videoUrl;
 }
 
 async function openModal(showId) {
@@ -221,7 +222,6 @@ async function openModal(showId) {
         totalSeasons: showDetails.number_of_seasons
     };
     
-    // Create or update the episode selection container
     let selectorContainer = document.getElementById('episode-selector-container');
     if (!selectorContainer) {
         selectorContainer = document.createElement('div');
@@ -230,17 +230,14 @@ async function openModal(showId) {
         document.querySelector('.modal-content').insertBefore(selectorContainer, document.getElementById('player'));
     }
     
-    // Clear existing content
     selectorContainer.innerHTML = '';
     
-    // Add season and episode selectors
     const seasonSelect = await createSeasonSelector(showId, showDetails.number_of_seasons);
     const episodeSelect = await createEpisodeSelector(showId, 1);
     
     selectorContainer.appendChild(seasonSelect);
     selectorContainer.appendChild(episodeSelect);
     
-    // Update player
     updatePlayer();
     modal.style.display = 'block';
 }
