@@ -1,4 +1,3 @@
-
 const API_KEY = '2283c405a7e1d26a6b72a786916aad85';
 const API_BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_BASE_URL = 'https://image.tmdb.org/t/p/w500';
@@ -205,7 +204,7 @@ async function renderCategories() {
 // Modal Functions
 function updatePlayer() {
     const player = document.getElementById('player');
-    player.src = `https://vidsrc.dev/embed/tv/embed/tv/${state.currentShow.id}/${state.currentShow.season}/${state.currentShow.episode}`;
+    player.src = `https://vidsrc.xyz/embed/tv/${state.currentShow.id}/${state.currentShow.season}/${state.currentShow.episode}`;
 }
 
 async function openModal(showId) {
