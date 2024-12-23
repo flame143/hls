@@ -205,7 +205,7 @@ async function renderCategories() {
 // Modal Functions
 function updatePlayer() {
     const player = document.getElementById('player');
-    player.src = `https://vidsrc.xyz/embed/tv/embed/tv/${state.currentShow.id}/${state.currentShow.season}/${state.currentShow.episode}`;
+    player.src = `https://vidsrc.dev/embed/tv/embed/tv/${state.currentShow.id}/${state.currentShow.season}/${state.currentShow.episode}`;
 }
 
 async function openModal(showId) {
